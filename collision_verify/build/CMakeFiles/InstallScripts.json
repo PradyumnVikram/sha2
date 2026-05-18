@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/sjais/acads/sha2/collision_verify/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
