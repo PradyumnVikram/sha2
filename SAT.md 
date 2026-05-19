@@ -1,0 +1,24 @@
+# SAT Solver
+
+A SAT Solver is just a Boolean Satisfiability Solver, which takes in a formula in the CNF (Conjunctive Normal Form) and outputs whether a given set of values of the boolean variables in the formula can satisfy it.
+
+CNF → Product of sums, or an AND of OR s. NOT operator can also be used in this. Every [propositional](https://en.wikipedia.org/wiki/Propositional_formula) formula can be converted to its CNF form. In the SAT solvers being used, the syntax to represent our formula in CNF form is the [extended](https://www.msoos.org/xor-clauses/) [DIMACS CNF](https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html).
+
+[CryptoMiniSat SAT Solver](https://github.com/msoos/cryptominisat) in particular uses the CNF with extend XOR clauses, as mentioned in the reference to “extended”. The form is as follows:
+
+```
+p cnf 3 2
+1 2 -3 0
+-2 3 0
+```
+
+- The first line is of the form `p cnf <variables> <clauses>`, that is the first argument represents the number of variables, and the second argument represents the number of clauses. 
+- A clause is anything that starts after the initial `p cnf <variables> <clauses>` till the first 0 is hit.  The `0` at the end is just the delimiter signifying end of clause.
+	- If there are $n$ variables, then they are indexed as $1,2, … , n$, thus $v_1, v_2, …, v_n$. 
+	- A negative sign in front of the number implies _negation_ of that variable. Thus, `1 2 -3` maps to $v_1 \vee v_2 \vee \neg v_3$. 
+	- In the extended version, lines starting with `x`, such as `x 1 2 3 0` represent the XOR operation instead of OR. Thus, it corresponds to $v_1 \oplus v_2 \oplus v_3$, where $\oplus$ is XOR. 
+- All the clauses have to evaluate to `1` or True (and hence their AND together) for some input values to the $n$ variables for satisfiability to exist. 
+
+It seems SAT solvers use stuff like [Boolean Constraint Propagation](https://en.wikipedia.org/wiki/Unit_propagation) to simply the CNF further? 
+
+https://haz-tech.blogspot.com/2010/08/whos-watching-watch-literals.html?m=1

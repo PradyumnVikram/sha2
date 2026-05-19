@@ -62,6 +62,21 @@ def modadd_value(block_size, a, b, c, v):
     return eqn
 
 
+# Unstructured comment, but since the constraints in the constrain_condition file are exactly the same
+# just with the columns re-arranged, this function which switches flags is completely irrelevant, instead 
+# the following would work just fine.
+
+# def expand_model(block_size, in_var_v, in_var_d, c_var_v, c_var_d, out_var_v, out_var_d, flag):
+#     eqn = "ASSERT %s = 0bin0;\nASSERT %s = 0bin0;\n" % (c_var_v[0], c_var_d[0])
+
+#     for i in range(block_size):
+#         temp = [in_var_v[i], in_var_d[i],
+#                 c_var_v[i], c_var_d[i],
+#                 out_var_v[i], out_var_d[i],
+#                 c_var_v[i + 1], c_var_d[i + 1]]
+#         eqn += generate_constraints(temp, expand_model_constrain_1)
+
+
 def expand_model(block_size, in_var_v, in_var_d, c_var_v, c_var_d, out_var_v, out_var_d, flag):
     """
     if flag ==1: model the expansion of the signed difference
