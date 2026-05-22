@@ -1,42 +1,43 @@
 import subprocess
-from unit_function_256 import *
+from find_dc.configuration.unit_function_256 import *
 
 
 class FunctionModel:
     def __init__(self, init_HW, steps, bounds, message_bound, message_differential, op0, op1, op2, op3, op4, op5, op6,
                  op7, op8):
-        self.__obj_value = init_HW
+        self.__obj_value = init_HW #initial Hamming-weight objective bound for the search.
 
         self.__end_step = bounds
         self.__start_step = steps
         self.__message_bound = message_bound
-        self.__message_differential = message_differential
+        self.__message_differential = message_differential # message word indices allowed to have differences
         self.__block_size = 32
 
-        self.__declare = []
-        self.__constraints = []
+        self.__declare = [] # variable declarations
+        self.__constraints = [] # STP constraints
 
-        self.__op0 = op0
-        self.__op1 = op1
-        self.__op2 = op2
-        self.__op3 = op3
-        self.__op4 = op4
-        self.__op5 = op5
-        self.__op6 = op6
-        self.__op7 = op7
-        self.__op8 = op8
+        self.__op0 = op0 # flag for enabling (per step) Sigma1 modeling in register E
+        self.__op1 = op1 # flag for enabling (per step) IF modeling in register E
+        self.__op2 = op2 # flag for selecting the expansion mode in register E
+        self.__op3 = op3 # flag for enabling (per step) Sigma0 modeling in register A
+        self.__op4 = op4 # flag for enabling (per step) MAJ modeling in register A
+        self.__op5 = op5 # flag for selecting the expansion mode in register A
+        self.__op6 = op6 # unused
+        self.__op7 = op7 # unused
+        self.__op8 = op8 # flag to use the message expansion model for > 16 words
 
-    def save_variable(self, s):
+    def save_variable(self, s): # declares a 1-bit STP variable if it hasn't been declared yet
         temp = s + ": BITVECTOR(1);\n"
         if temp not in self.__declare:
             self.__declare.append(temp)
-        return s
+        return s #returns the bare variable name and not the STP declaration
 
-    def check_assign(self, s):
+    def check_assign(self, s): # records a complete STP declaration if it is not already present
         if s not in self.__declare:
             self.__declare.append(s)
 
     def assign_value(self):
+        # every message block that is not in the allowed list must have zero differentials
         for i in range(self.__message_bound):
             if i not in self.__message_differential:
                 for j in range(self.__block_size):
@@ -45,20 +46,26 @@ class FunctionModel:
                     temp += "ASSERT %s = 0bin0;\n" % (
                         self.save_variable("wd_" + str(i) + "_" + str(self.__block_size - 1 - j)))
                     self.__constraints.append(temp)
+
+        # at least one differential bit should exist to prevent a trivial solution
         temp = "ASSERT BVGT(BVPLUS(10,"
         for i in range(len(self.__message_differential)):
             print(self.__message_differential[i])
+            # this loop saves variables for message differential bits for each message word index
+            # and constructs an STP assertion for setting the total Hamming-weight of the message
+            # differences to be > 1
             for j in range(self.__block_size):
                 if len(self.__message_differential) - 1 == i and j == self.__block_size - 1:
                     temp += "0bin000000000@%s), 0bin%s);\n" % (
                         self.save_variable(
                             "wv_" + str(self.__message_differential[i]) + "_" + str(self.__block_size - 1 - j)),
-                        bin(1)[2:].zfill(10))
+                        bin(1)[2:].zfill(10)) # each 1-bit variable is extended to a 10-bit vector
                 else:
                     temp += "0bin000000000@%s," % (
                         self.save_variable(
                             "wd_" + str(self.__message_differential[i]) + "_" + str(self.__block_size - 1 - j)))
         self.__constraints.append(temp)
+        # this part forces specific constraints on the 18th and 16th message words' differences
         temp = "ASSERT BVPLUS(10,"
         for j in range(32):
             if j == 31:
@@ -73,6 +80,8 @@ class FunctionModel:
             else:
                 temp += "0bin000000000@%s," % ("wd_" + str(16) + "_" + str(j))
         self.__constraints.append(temp)
+
+        # state words for rounds before the start should be zero 
         for step in range(self.__start_step - 4, self.__start_step):
             for i in range(self.__block_size):
                 temp = "ASSERT xv_" + str(step) + "_" + str(i) + " = 0bin0;\n"
@@ -102,6 +111,7 @@ class FunctionModel:
             for var in variable_a:
                 self.check_assign(var)
 
+        # expands message words after the first 16 words
         for i in range(self.__message_bound):
             if i > 15:
                 variable_w, constrain_w = message_expand(self.__block_size, self.__op8[i], i)
@@ -109,6 +119,8 @@ class FunctionModel:
                 for var in variable_w:
                     self.check_assign(var)
 
+        # adds additional Hamming-weight constraints on selected E-side difference words and message differences.
+        # These constraints narrow the SAT search to the intended 31-step characteristic.
         temp = "ASSERT BVPLUS(10,"
         for j in range(32):
             if j == 31:
@@ -171,6 +183,11 @@ class FunctionModel:
         variable = "".join(self.__declare)
         query = '\n' + 'QUERY FALSE;\nCOUNTEREXAMPLE;'
         kk = -1
+        # QUERY FALSE asks STP whether FALSE follows from all the current assertions
+        # if the assertions are satisfiable, then FALSE is not implied; STP can produce a counterexample.
+        # so, finding a counterexample means that all asserted constraints were satisfied
+
+        # descending search to try and find the maximum feasible Hamming-weight
         for obj_val in range(self.__obj_value, -1, -1):
             file_write = open("find_dc_model.cvc", "w")
             obj = self.obj_value(obj_val)
@@ -199,6 +216,8 @@ class FunctionModel:
 
 
 if __name__ == '__main__':
+    # The model covers steps [5, 19), uses 31 message schedule words, and allows
+    # message differences only at the listed word indexes.
     start_step = 5
     end_step = 19
     message_bound = 31
