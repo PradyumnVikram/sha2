@@ -44,6 +44,7 @@ You can’t apply a general signed difference on any word $m$, it can lead to co
 #### Modular Addition
  For now, the actual messages themselves do not matter to us. We only care about the signed differences (to build the characteristic). In modular addition, since there’s carry operations happening, we need to introduce an intermediate state which can track the index-by-index carry. No carry initially, hence $\Delta c[0] = [=]$. $\Delta c$ is simply an intermediate state during addition of two signed differences, and is influenced solely by the signed differences themselves.
 $$(\Delta x[i], \Delta y[i], \Delta c[i]) \to (\Delta z[i], \Delta c[i+1])$$
+
 #### Modular Difference Expansions 
 This signed difference obtained corresponds to a given modular difference, and since as long as the modular difference remains the same, the modular addition result can be considered valid (since each of the signed differences, by definition correspond to the same modular difference in decimal value between the two instances, since the operation being done is modular addition we only care about the difference in values to be the same). To explore multiple pathways (since many contradictions arise in SHA2), we explore all the different signed differences possible. 
 
@@ -59,6 +60,32 @@ This signed difference obtained corresponds to a given modular difference, and s
 
 #### Boolean Function Expansions
 Boolean functions also have to be modeled in a similar fashion, except there’s the interesting part about Fast-Filtering methods not keeping in mind that there might not exist concrete bits satisfying the given constraints, whereas the full-model explicitly also includes the concrete bits, thus guarantees  
+
+- `op0`: Controls XOR function for E.
+- `op1`: Controls IF function for E.
+- `op2`: expand_model for E.
+- `op3`: Controls XOR function for A.
+- `op4`: Controls MAJ function for A.
+- `op5`: expand_model for A. 
+- `op6`:  
+- `op7`: it adds constraints to the concrete values of the
+- `op8`: only in `find_dc_model_31_256.py`, but also mentioned once (with retarded stuff) in `find_dc_model_31_512.py`, 
+
+
+`find_dc_model_31_256.py` -> Used as op8, but passed as 
+
+
+## TO-DOs
+
+1. How is hamming-weight being used.
+	- Theoretical bounds obtained by hamming-weight methods. 
+
+
+
+## What do we know
+1. SHA2 Algorithm Sorted
+2. 
+
 
 ## Errata
 [1] → The order mentioned in the paper is not correct, the mentioned column order is $( \Delta \xi[i],\Delta z[i], \Delta c[i]) \to (\Delta c[i+1])$, whereas the correct column order matching the code is $(\Delta z[i], \Delta \xi[i],\Delta c[i]) \to (\Delta c[i+1])$.
