@@ -2,9 +2,22 @@ import subprocess
 from unit_function_256 import *
 
 
+# This script builds and solves an STP/CVC model for a SHA-256 differential
+# characteristic search. It encodes bitvector variables for the message words,
+# internal state bits, and differential propagation conditions, then runs STP to
+# find a counterexample with a given Hamming-weight objective.
 class FunctionModel:
     def __init__(self, init_HW, steps, bounds, message_bound, message_differential, op0, op1, op2, op3, op4, op5, op6,
                  op7):
+        """Initialize the differential model.
+
+        init_HW: starting Hamming-weight objective.
+        steps: first active step index.
+        bounds: last active step index.
+        message_bound: number of message words in the schedule.
+        message_differential: message indices with a nonzero differential.
+        op0..op7: per-step flags controlling the SHA-256 operations.
+        """
         self.__obj_value = init_HW
 
         self.__end_step = bounds
@@ -26,16 +39,19 @@ class FunctionModel:
         self.__op7 = op7
 
     def save_variable(self, s):
+        # Declare a bitvector variable exactly once and return the name.
         temp = s + ": BITVECTOR(1);\n"
         if temp not in self.__declare:
             self.__declare.append(temp)
         return s
 
     def check_assign(self, s):
+        # Add a variable declaration for every helper-generated bitvector name.
         if s not in self.__declare:
             self.__declare.append(s)
 
     def assign_value(self):
+        # Fix all non-differential message words to zero.
         for i in range(self.__message_bound):
             if i not in self.__message_differential:
                 for j in range(self.__block_size):
@@ -44,6 +60,9 @@ class FunctionModel:
                     temp += "ASSERT %s = 0bin0;\n" % (
                         self.save_variable("wd_" + str(i) + "_" + str(self.__block_size - 1 - j)))
                     self.__constraints.append(temp)
+
+        # Require the selected message differential bits to contribute at least one
+        # unit of Hamming weight.
         temp = "ASSERT BVGT(BVPLUS(10,"
         for i in range(len(self.__message_differential)):
             print(self.__message_differential[i])
@@ -77,6 +96,8 @@ class FunctionModel:
                 self.__constraints.append(temp)
 
     def main(self):
+        # Generate the round-by-round SHA-256 differential constraints for the
+        # active step window and the message schedule.
         for i in range(self.__start_step, self.__end_step):
             variable_e, constrain_e = sha_e(self.__block_size, self.__op0[i], self.__op1[i], self.__op2[i], i)
             self.__constraints.append("".join(constrain_e))
